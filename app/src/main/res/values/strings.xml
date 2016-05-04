@@ -1,3 +1,6 @@
 <resources>
-    <string name="app_name">SMS2MailForwarder</string>
+    <string name="app_name">SMS2Mail Forwarder</string>
+    <string name="service_name">SMS2MailForwarderService</string>
+
+    <string name="btn_send_test_mail">send test mail</string>
 </resources>
