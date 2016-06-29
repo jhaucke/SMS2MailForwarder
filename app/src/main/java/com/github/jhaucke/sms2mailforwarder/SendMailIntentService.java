@@ -1,25 +1,34 @@
 package com.github.jhaucke.sms2mailforwarder;
 
+import android.app.Activity;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by jeremias.haucke on 04.05.2016.
  */
 public class SendMailIntentService extends IntentService {
 
+    public static final String SEND_MAIL_INTENT_SERVICE = "SendMailIntentService";
+
     private Handler toastHandler;
+    private SharedPreferences sharedPreferences;
 
     /**
      * Creates an IntentService.  Invoked by your subclass's constructor.
      */
     public SendMailIntentService() {
-        super("SendMailIntentService");
+        super(SEND_MAIL_INTENT_SERVICE);
         toastHandler = new Handler(Looper.getMainLooper());
     }
 
@@ -37,23 +46,27 @@ public class SendMailIntentService extends IntentService {
      */
     @Override
     protected void onHandleIntent(Intent intent) {
-        Mail m = new Mail("gmailusername@gmail.com", "password");
 
-        String[] toArr = {"bla@bla.com", "lala@lala.com"};
-        m.setTo(toArr);
-        m.setFrom("wooo@wooo.com");
-        m.setSubject("This is an email sent using my Mail JavaMail wrapper from an Android device.");
-        m.setBody("Email body.");
+        sharedPreferences = getSharedPreferences(Constants.SHARED_PREFERENCES_NAME, Activity.MODE_PRIVATE);
+
+        Mail m = new Mail(sharedPreferences.getString(Constants.SHARED_PREF_USER, ""), sharedPreferences.getString(Constants.SHARED_PREF_PASSWORD, ""),
+                sharedPreferences.getString(Constants.SHARED_PREF_SMTP, ""));
+
+        Set<String> stringSet = sharedPreferences.getStringSet(Constants.SHARED_PREF_RECIPIENTS, new HashSet<String>());
+        m.setTo(stringSet.toArray(new String[stringSet.size()]));
+        m.setFrom(sharedPreferences.getString(Constants.SHARED_PREF_FORWARDER, ""));
+        m.setSubject(intent.getStringExtra(Constants.EXTRA_SUBJECT));
+        m.setBody(intent.getStringExtra(Constants.EXTRA_BODY));
 
         try {
             if(m.send()) {
-                toastHandler.post(new ToastRunnable("Email was sent successfully."));
+                toastHandler.post(new ToastRunnable(getString(R.string.mail_sent_successfully)));
             } else {
-                toastHandler.post(new ToastRunnable("Email was not sent."));
+                toastHandler.post(new ToastRunnable(getString(R.string.mail_not_sent)));
             }
         } catch(Exception e) {
-            toastHandler.post(new ToastRunnable("There was a problem sending the email."));
-            Log.e("SendMailIntentService", "Could not send email", e);
+            toastHandler.post(new ToastRunnable(getString(R.string.mail_send_problem)));
+            Log.e(SEND_MAIL_INTENT_SERVICE, getString(R.string.mail_could_not_send_email), e);
         }
     }
 
